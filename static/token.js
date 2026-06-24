@@ -14,12 +14,17 @@
     });
   }
 
-  // --- QR code holding the signed JWT (or order id if already served) ---
-  const qrData = jwt || order.public_id;
+  // --- QR code holding the short order code (e.g. "T-9F3A2C"). Encoding only the
+  // code — not the long JWT — keeps the QR low-density so a waiter's phone scans
+  // it instantly off the screen. The server validates the code against the DB. ---
   if (window.QRCode) {
-    QRCode.toCanvas(qrData, { width: 96, margin: 1 }, (err, canvas) => {
-      if (!err) document.getElementById("qr").appendChild(canvas);
-    });
+    QRCode.toCanvas(
+      order.public_id,
+      { width: 140, margin: 2, errorCorrectionLevel: "H" },
+      (err, canvas) => {
+        if (!err) document.getElementById("qr").appendChild(canvas);
+      }
+    );
   }
 
   // --- Offline caching: keep the token visible if wifi/power dies ---
