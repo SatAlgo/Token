@@ -384,31 +384,47 @@ def api_order_status(public_id: str, session: Session = Depends(get_session)):
 # --------------------------------------------------------------------------- #
 # Token verification (waiter scans QR / pastes token)
 # --------------------------------------------------------------------------- #
-@app.post("/api/verify")
-def api_verify(payload: dict, session: Session = Depends(get_session)):
-    """Cryptographically verify a token AND check it hasn't been served/revoked."""
-    token = payload.get("token", "")
-    try:
-        claims = security.decode_token(token)
-    except jwt.ExpiredSignatureError:
-        return {"valid": False, "reason": "Token expired"}
-    except jwt.PyJWTError:
-        return {"valid": False, "reason": "Invalid signature — possible fake"}
-
-    order = session.exec(
-        select(Order).where(Order.public_id == claims["sub"])
-    ).first()
+def _validate_for_serving(order: Order | None, *, jti: str | None = None) -> dict:
+    """Shared rules for whether an order can be served right now."""
     if not order:
-        return {"valid": False, "reason": "Unknown token"}
+        return {"valid": False, "reason": "No order found for that code"}
     # Serving clears the jti, so check served status first for a clearer message.
     if order.status == OrderStatus.SERVED:
         return {"valid": False, "reason": "Already served", "order": order_to_public_dict(order)}
-    if order.token_jti != claims.get("jti"):
+    # jti is only checked for QR/JWT verification (cryptographic path).
+    if jti is not None and order.token_jti != jti:
         return {"valid": False, "reason": "Token revoked"}
     if order.status != OrderStatus.PAID:
         return {"valid": False, "reason": f"Order is {order.status.value}"}
-
     return {"valid": True, "order": order_to_public_dict(order)}
+
+
+@app.post("/api/verify")
+def api_verify(payload: dict, session: Session = Depends(get_session)):
+    """Verify a token three ways:
+    - {"token": "<jwt>"}      QR scan / paste — cryptographically checks the signature.
+    - {"public_id": "T-XXXX"} the short code on the token — looked up in the DB.
+    """
+    token = (payload.get("token") or "").strip()
+    public_id = (payload.get("public_id") or "").strip().upper()
+
+    if token:
+        try:
+            claims = security.decode_token(token)
+        except jwt.ExpiredSignatureError:
+            return {"valid": False, "reason": "Token expired"}
+        except jwt.PyJWTError:
+            return {"valid": False, "reason": "Invalid signature — possible fake"}
+        order = session.exec(select(Order).where(Order.public_id == claims["sub"])).first()
+        return _validate_for_serving(order, jti=claims.get("jti"))
+
+    if public_id:
+        if not public_id.startswith("T-"):
+            public_id = "T-" + public_id          # allow typing just the code part
+        order = session.exec(select(Order).where(Order.public_id == public_id)).first()
+        return _validate_for_serving(order)
+
+    return {"valid": False, "reason": "Enter a code or scan a token"}
 
 
 # --------------------------------------------------------------------------- #
@@ -610,6 +626,23 @@ def admin_orders(
         d["delivered"] = o.status == OrderStatus.SERVED
         result.append(d)
     return result
+
+
+@app.delete("/api/admin/orders/{public_id}")
+def admin_delete_order(
+    public_id: str, request: Request, session: Session = Depends(get_session)
+):
+    """Delete a finished order from history. An active (paid, not-yet-served)
+    order can't be deleted — serve it first so its live token isn't orphaned."""
+    require_admin(request)
+    order = session.exec(select(Order).where(Order.public_id == public_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status == OrderStatus.PAID:
+        raise HTTPException(status_code=409, detail="Order is still active — serve it first")
+    session.delete(order)
+    session.commit()
+    return {"deleted": public_id}
 
 
 @app.get("/api/admin/analytics")

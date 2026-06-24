@@ -117,8 +117,8 @@
         const table = o.table_number
           ? `<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">🪑 Table ${o.table_number}</span>`
           : "";
-        const serveBtn = o.delivered
-          ? ""
+        const actions = o.delivered
+          ? `<button data-del-order="${o.public_id}" class="mt-3 w-full rounded-xl bg-rose-600/20 text-rose-400 border border-rose-600/40 font-semibold py-2 text-sm">Delete order</button>`
           : `<button data-serve="${o.public_id}" class="mt-3 w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold py-2 text-sm">Mark delivered ✓</button>`;
         return `
         <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
@@ -130,7 +130,7 @@
           </div>
           <p class="text-xs text-slate-500 mt-0.5">${t}</p>
           <div class="mt-2 text-sm leading-relaxed">${items}</div>
-          ${serveBtn}
+          ${actions}
         </div>`;
       })
       .join("");
@@ -150,7 +150,23 @@
         }
       })
     );
+    $$("[data-del-order]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const id = b.dataset.delOrder;
+        if (!confirm(`Delete order ${id}? It will be removed from history permanently.`)) return;
+        try {
+          const res = await fetch(`/api/admin/orders/${id}`, { method: "DELETE" });
+          if (!res.ok) throw new Error((await res.json()).detail);
+          loadOrders();
+        } catch (e) {
+          alert("Could not delete: " + e.message);
+        }
+      })
+    );
   }
+  $("#admin-verify-btn").addEventListener("click", () =>
+    window.TokenVerify.open({ onServed: loadOrders })
+  );
   $$(".filter-btn").forEach((b) =>
     b.addEventListener("click", () => {
       orderFilter = b.dataset.filter;

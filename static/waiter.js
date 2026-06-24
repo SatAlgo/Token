@@ -97,87 +97,11 @@
     };
   }
 
-  // --- Token verification modal ---
-  const modal = document.getElementById("verify-modal");
-  const resultEl = document.getElementById("verify-result");
-  let scanner = null;
-
-  async function verifyToken(token) {
-    resultEl.innerHTML = '<p class="text-slate-400 text-sm">Verifying…</p>';
-    try {
-      const res = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      const data = await res.json();
-      if (data.valid) {
-        const o = data.order;
-        resultEl.innerHTML = `
-          <div class="rounded-xl bg-emerald-500/15 border border-emerald-500/40 p-4">
-            <p class="text-emerald-400 font-bold text-lg">✓ Genuine — ${o.public_id}</p>
-            <div class="mt-2 text-sm text-slate-300">${o.items.map((i) => `${i.emoji} ${i.name} × ${i.qty}`).join("<br>")}</div>
-            <p class="mt-2 font-bold text-emerald-400">${rupees(o.total_paise)}</p>
-            <button id="verify-serve" class="mt-3 w-full rounded-xl bg-emerald-600 font-semibold py-2">Mark served ✓</button>
-          </div>`;
-        document.getElementById("verify-serve").addEventListener("click", async () => {
-          await serve(o.public_id, document.getElementById("verify-serve"));
-          closeModal();
-        });
-      } else {
-        resultEl.innerHTML = `
-          <div class="rounded-xl bg-rose-500/15 border border-rose-500/40 p-4">
-            <p class="text-rose-400 font-bold text-lg">✕ ${data.reason}</p>
-            <p class="text-xs text-slate-400 mt-1">Do not serve this token.</p>
-          </div>`;
-      }
-    } catch (e) {
-      resultEl.innerHTML = `<p class="text-rose-400 text-sm">Error: ${e.message}</p>`;
-    }
-  }
-
-  function openModal() {
-    modal.classList.remove("hidden");
-    resultEl.innerHTML = "";
-    if (window.Html5Qrcode) {
-      scanner = new Html5Qrcode("reader");
-      scanner
-        .start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
-          verifyToken(text);
-          stopScanner();
-        })
-        .catch(() => {
-          document.getElementById("reader").innerHTML =
-            '<p class="text-slate-500 text-xs p-4 text-center">Camera unavailable — paste the token below.</p>';
-        });
-    }
-  }
-
-  function stopScanner() {
-    if (scanner) {
-      scanner.stop().catch(() => {});
-      scanner = null;
-    }
-  }
-
-  function closeModal() {
-    stopScanner();
-    modal.classList.add("hidden");
-  }
-
-  document.getElementById("scan-btn").addEventListener("click", openModal);
-  document.getElementById("verify-close").addEventListener("click", closeModal);
-  document.getElementById("manual-verify").addEventListener("click", () => {
-    const t = document.getElementById("manual-token").value.trim();
-    if (t) verifyToken(t);
+  // --- Token verification (shared modal: code / QR / paste) ---
+  document.getElementById("scan-btn").addEventListener("click", () => {
+    // When served from the verify modal, the WebSocket broadcast removes the card.
+    window.TokenVerify.open({ onServed: () => {} });
   });
-
-  // Refresh "x ago" labels every 20s.
-  setInterval(() => {
-    seen.forEach((card, id) => {
-      // no-op placeholder; times update on reload — kept simple for MVP
-    });
-  }, 20000);
 
   loadInitial();
   connectWS();

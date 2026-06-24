@@ -23,22 +23,6 @@
   </main>
 </div>
 
-<!-- Verify modal -->
-<div id="verify-modal" class="hidden fixed inset-0 z-30 bg-slate-950/90 backdrop-blur p-4 flex flex-col">
-  <div class="mx-auto max-w-md w-full">
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="font-bold">Verify a token</h2>
-      <button id="verify-close" class="text-slate-400">✕</button>
-    </div>
-    <div id="reader" class="rounded-xl overflow-hidden bg-black aspect-square"></div>
-    <p class="mt-2 text-xs text-slate-400 text-center">Point the camera at the customer's QR, or paste the token below.</p>
-    <textarea id="manual-token" rows="2" placeholder="Paste token…"
-      class="mt-2 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs"></textarea>
-    <button id="manual-verify" class="mt-2 w-full rounded-xl bg-emerald-500 text-slate-950 font-bold py-2">Verify</button>
-    <div id="verify-result" class="mt-3"></div>
-  </div>
-</div>
-
 <template id="order-template">
   <div class="order-card rounded-2xl bg-slate-900 border border-slate-800 p-4">
     <div class="flex items-start justify-between">
@@ -61,5 +45,6 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/verify.js"></script>
 <script src="/static/waiter.js"></script>
 {% endblock %}
