@@ -5,12 +5,15 @@ the database, payments, JWT tokens and the realtime WebSocket hub.
 """
 from __future__ import annotations
 
+import base64
+import io
 import json
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import jwt
+import qrcode
 from fastapi import (
     Depends,
     FastAPI,
@@ -39,6 +42,22 @@ from .seed import seed_menu
 def naive_utc(dt: datetime | None) -> datetime | None:
     """SQLite returns naive datetimes; strip tzinfo so comparisons never mix types."""
     return dt.replace(tzinfo=None) if dt and dt.tzinfo else dt
+
+
+def qr_data_uri(text: str) -> str:
+    """Render a QR code for `text` server-side and return it as a PNG data URI.
+
+    Doing this on the server avoids depending on a client-side QR library/CDN and
+    works offline (the image is embedded in the page)."""
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=6, border=2
+    )
+    qr.add_data(text)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
 @asynccontextmanager
@@ -157,6 +176,7 @@ def page_token(request: Request, public_id: str, session: Session = Depends(get_
             "request": request,
             "order": order_to_public_dict(order),
             "token": token,
+            "qr_data_uri": qr_data_uri(order.public_id),
             "shop_name": settings.SHOP_NAME,
         },
     )

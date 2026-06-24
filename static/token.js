@@ -14,18 +14,7 @@
     });
   }
 
-  // --- QR code holding the short order code (e.g. "T-9F3A2C"). Encoding only the
-  // code — not the long JWT — keeps the QR low-density so a waiter's phone scans
-  // it instantly off the screen. The server validates the code against the DB. ---
-  if (window.QRCode) {
-    QRCode.toCanvas(
-      order.public_id,
-      { width: 140, margin: 2, errorCorrectionLevel: "H" },
-      (err, canvas) => {
-        if (!err) document.getElementById("qr").appendChild(canvas);
-      }
-    );
-  }
+  // (The QR is now rendered server-side as an <img>, so no client-side QR lib.)
 
   // --- Offline caching: keep the token visible if wifi/power dies ---
   // Stored in localStorage so the PWA can show it even with no network.

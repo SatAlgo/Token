@@ -66,11 +66,14 @@
         <span class="text-xl font-bold text-emerald-400">{{ order.total_paise | rupees }}</span>
       </div>
 
-      <!-- QR holds the signed JWT so a waiter can scan + verify cryptographically -->
+      <!-- QR holds the short order code; the waiter scans it (or reads the code)
+           to verify and serve. Rendered server-side so it always shows. -->
       <div class="mt-5 flex items-center gap-4">
-        <div id="qr" class="bg-white p-2 rounded-lg shrink-0"></div>
+        <img src="{{ qr_data_uri }}" alt="Scan to verify {{ order.public_id }}"
+             class="bg-white p-1.5 rounded-lg shrink-0 h-28 w-28" />
         <p class="text-xs text-slate-400 leading-relaxed">
-          Show this moving token to the waiter. They scan or tap to verify it's genuine.
+          Show this moving token to the waiter. They scan the QR (or type the code
+          <span class="font-mono text-slate-300">{{ order.public_id }}</span>) to verify it's genuine.
           Works even if your wifi drops.
         </p>
       </div>
@@ -94,6 +97,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="/static/token.js"></script>
 {% endblock %}
