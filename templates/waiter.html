@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Waiter · {{ shop_name }}{% endblock %}
+{% block body %}
+<div class="mx-auto max-w-md min-h-full pb-6">
+  <header class="sticky top-0 z-10 bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+    <div>
+      <h1 class="text-lg font-bold">Waiter board</h1>
+      <p class="text-xs text-slate-400 flex items-center gap-1">
+        <span id="ws-dot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+        <span id="ws-text">connecting…</span>
+      </p>
+    </div>
+    <div class="flex items-center gap-3 text-xs">
+      <button id="scan-btn" class="text-emerald-400">Verify token</button>
+      <a href="/admin" class="text-slate-500 hover:text-slate-300">Admin</a>
+      <a href="/logout" class="text-slate-500 hover:text-slate-300">Logout</a>
+      <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <main id="orders" class="px-4 mt-4 space-y-3">
+    <p id="empty" class="text-center text-sm text-slate-500 mt-16">No active orders. New paid orders appear here instantly. ☕</p>
+  </main>
+</div>
+
+<!-- Verify modal -->
+<div id="verify-modal" class="hidden fixed inset-0 z-30 bg-slate-950/90 backdrop-blur p-4 flex flex-col">
+  <div class="mx-auto max-w-md w-full">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="font-bold">Verify a token</h2>
+      <button id="verify-close" class="text-slate-400">✕</button>
+    </div>
+    <div id="reader" class="rounded-xl overflow-hidden bg-black aspect-square"></div>
+    <p class="mt-2 text-xs text-slate-400 text-center">Point the camera at the customer's QR, or paste the token below.</p>
+    <textarea id="manual-token" rows="2" placeholder="Paste token…"
+      class="mt-2 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs"></textarea>
+    <button id="manual-verify" class="mt-2 w-full rounded-xl bg-emerald-500 text-slate-950 font-bold py-2">Verify</button>
+    <div id="verify-result" class="mt-3"></div>
+  </div>
+</div>
+
+<template id="order-template">
+  <div class="order-card rounded-2xl bg-slate-900 border border-slate-800 p-4">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <p class="public-id text-lg font-bold"></p>
+          <span class="table hidden text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300"></span>
+        </div>
+        <p class="time text-xs text-slate-500"></p>
+      </div>
+      <span class="total text-emerald-400 font-bold"></span>
+    </div>
+    <div class="items mt-2 space-y-0.5 text-sm text-slate-300"></div>
+    <button class="serve-btn mt-3 w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold py-2.5">
+      Mark served ✓
+    </button>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/waiter.js"></script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ shop_name }} — Order{% endblock %}
+{% block body %}
+<div class="mx-auto max-w-md min-h-full pb-32">
+  <!-- Header -->
+  <header class="sticky top-0 z-10 bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+    <div>
+      <h1 class="text-lg font-bold">{{ shop_name }} 🍵</h1>
+      <p class="text-xs text-slate-400">Self-service · pay online · skip the queue</p>
+    </div>
+    <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+  </header>
+
+  {% if payment_mode == "demo" %}
+  <div class="mx-4 mt-3 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-300">
+    Demo mode — payment is simulated, no real money is charged.
+  </div>
+  {% endif %}
+
+  <!-- Menu -->
+  <main class="px-4 mt-4 space-y-6">
+    {% for category, items in categories.items() %}
+    <section>
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">{{ category }}</h2>
+      <div class="space-y-2">
+        {% for item in items %}
+        <div class="flex items-center gap-3 rounded-xl bg-slate-900 border border-slate-800 p-3">
+          {% if item.image_url %}
+          <img src="{{ item.image_url }}" alt="{{ item.name }}" class="h-14 w-14 rounded-lg object-cover shrink-0" />
+          {% else %}
+          <div class="h-14 w-14 rounded-lg bg-slate-800 flex items-center justify-center text-2xl shrink-0">{{ item.emoji }}</div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="font-medium truncate">{{ item.name }}</p>
+            <p class="text-xs text-slate-400 truncate">{{ item.description }}</p>
+            <p class="text-sm font-semibold text-emerald-400 mt-0.5">{{ item.price_paise | rupees }}</p>
+          </div>
+          <div class="flex items-center gap-2" data-item="{{ item.id }}">
+            <button class="qty-minus h-8 w-8 rounded-lg bg-slate-800 text-lg leading-none disabled:opacity-30" disabled>−</button>
+            <span class="qty w-5 text-center text-sm font-semibold">0</span>
+            <button class="qty-plus h-8 w-8 rounded-lg bg-emerald-600 text-lg leading-none">+</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %}
+  </main>
+</div>
+
+<!-- Sticky checkout bar -->
+<div id="checkout-bar" class="fixed bottom-0 inset-x-0 z-20 translate-y-full transition-transform duration-300">
+  <div class="mx-auto max-w-md p-4 bg-slate-950/90 backdrop-blur rounded-t-2xl border-t border-slate-800 space-y-3">
+    <div class="flex items-center gap-2">
+      <label for="table-number" class="text-sm text-slate-400 shrink-0">🪑 Table</label>
+      <input id="table-number" inputmode="text" placeholder="e.g. 5 (optional)"
+        class="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" />
+    </div>
+    <button id="pay-btn"
+      class="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 flex items-center justify-between px-5 shadow-lg shadow-emerald-500/20">
+      <span id="cart-count">0 items</span>
+      <span>Pay <span id="cart-total">₹0</span> →</span>
+    </button>
+  </div>
+</div>
+
+<!-- Item price/name data for JS (built from server, source of truth is still server) -->
+<script id="menu-data" type="application/json">
+  {
+    {% for category, items in categories.items() %}{% for item in items %}"{{ item.id }}": {"name": "{{ item.name|e }}", "price": {{ item.price_paise }}, "emoji": "{{ item.emoji }}"}{% if not loop.last %},{% endif %}{% endfor %}{% if not loop.last %},{% endif %}{% endfor %}
+  }
+</script>
+{% endblock %}
+
+{% block scripts %}
+{% if payment_mode == "razorpay" %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endif %}
+<script src="/static/menu.js"></script>
+{% endblock %}

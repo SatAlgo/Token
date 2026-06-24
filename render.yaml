@@ -1,0 +1,28 @@
+# One-click deploy config for Render (https://render.com) free tier.
+# Push this repo to GitHub, then "New + > Blueprint" and point it here.
+services:
+  - type: web
+    name: tea-shop-tokens
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true # Render generates a strong random secret
+      - key: ADMIN_PASSWORD
+        sync: false # set this yourself in the dashboard
+      - key: PAYMENT_MODE
+        value: demo # change to "razorpay" and add keys below to go live
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: SHOP_NAME
+        value: Vakratunda Misal
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false # add to upload item images to Cloudinary (optional)
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

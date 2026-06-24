@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Your Token · {{ order.public_id }}{% endblock %}
+{% block body %}
+<div class="mx-auto max-w-md min-h-full p-4 flex flex-col">
+  <header class="flex items-center justify-between py-2">
+    <a href="/" class="text-sm text-slate-400 hover:text-slate-200">← Menu</a>
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-slate-500">{{ shop_name }}</span>
+      <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <!-- The digital token card. While active it pulses with a green glow and a
+       continuously-sweeping shimmer over a faint watermark (a "chrono-dynamic
+       watermark"), so a waiter can tell from across the room that it's a live
+       ticket and not a static screenshot. -->
+  <div id="token-card" class="token-live relative mt-4 rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-br from-slate-900 to-slate-800 shadow-2xl">
+    <!-- Faint diagonal watermark + a shimmer that sweeps across it forever. -->
+    <div class="token-watermark" aria-hidden="true">VALID&nbsp;·&nbsp;LIVE&nbsp;·&nbsp;VALID&nbsp;·&nbsp;LIVE</div>
+    <div class="token-shimmer" aria-hidden="true"></div>
+
+    <div class="relative p-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-widest text-slate-400">Order token</p>
+          <p class="text-3xl font-black tracking-tight">{{ order.public_id }}</p>
+          <p class="mt-1 text-xs text-slate-500">Booked at <span id="booked-at" class="text-slate-300 font-medium">—</span></p>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+          {% if order['table_number'] %}
+          <div class="text-right">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Table</p>
+            <p class="text-2xl font-black text-emerald-400">{{ order['table_number'] }}</p>
+          </div>
+          {% endif %}
+          <!-- Pulsing / glowing LIVE pill -->
+          <div id="live-pill" class="token-pill flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/50 px-2.5 py-1">
+            <span class="h-2 w-2 rounded-full bg-emerald-400" style="animation: pulse-ring 1.4s infinite;"></span>
+            <span class="text-[11px] font-bold tracking-wider text-emerald-300">LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 space-y-1.5">
+        {% for line in order['items'] %}
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-200">{{ line.emoji }} {{ line.name }} × {{ line.qty }}</span>
+          <span class="text-slate-400">₹{{ '%.0f' % (line.price_paise * line.qty / 100) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center">
+        <span class="text-sm text-slate-400">Total paid</span>
+        <span class="text-xl font-bold text-emerald-400">{{ order.total_paise | rupees }}</span>
+      </div>
+
+      <!-- QR holds the signed JWT so a waiter can scan + verify cryptographically -->
+      <div class="mt-5 flex items-center gap-4">
+        <div id="qr" class="bg-white p-2 rounded-lg shrink-0"></div>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Show this moving token to the waiter. They scan or tap to verify it's genuine.
+          Works even if your wifi drops.
+        </p>
+      </div>
+    </div>
+
+    <!-- SERVED overlay (revealed when the waiter marks it done) -->
+    <div id="served-overlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center">
+      <div class="text-emerald-400 text-6xl">✓</div>
+      <p class="mt-2 text-2xl font-black tracking-widest text-emerald-400 rotate-[-8deg] border-4 border-emerald-400 rounded-xl px-4 py-1">SERVED</p>
+      <p class="mt-3 text-sm text-slate-400">Enjoy your order!</p>
+    </div>
+  </div>
+
+  <p class="mt-4 text-center text-xs text-slate-500">
+    Status: <span id="status-text" class="font-semibold text-emerald-400">active</span>
+  </p>
+</div>
+
+<script id="order-data" type="application/json">{{ order | tojson }}</script>
+<script id="token-jwt" type="text/plain">{{ token }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="/static/token.js"></script>
+{% endblock %}

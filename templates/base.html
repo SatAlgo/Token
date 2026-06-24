@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>{% block title %}{{ shop_name }}{% endblock %}</title>
+  <meta name="theme-color" content="#0b1120" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <!-- Apply the saved theme before first paint so there's no light/dark flash. -->
+  <script>try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.add('light');}catch(e){}</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+    };
+  </script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    /* The token's "live" proof: a continuously pulsing green glow + a shimmer
+       that sweeps across a faint watermark forever. Both are constant motion, so
+       a static screenshot is instantly obvious and a waiter can read the state
+       (glowing green = active) from across the room. */
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(16,185,129,.45), 0 0 22px 2px rgba(16,185,129,.30); }
+      50%      { box-shadow: 0 0 0 1px rgba(16,185,129,.85), 0 0 46px 10px rgba(16,185,129,.65); }
+    }
+    @keyframes shimmer-sweep { 0% { transform: translateX(-160%) skewX(-12deg); } 100% { transform: translateX(160%) skewX(-12deg); } }
+    @keyframes pill-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.0); }
+      50%      { box-shadow: 0 0 14px 2px rgba(16,185,129,.55); }
+    }
+    @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+
+    .token-live { animation: glow-pulse 1.6s ease-in-out infinite; }
+    .token-pill { animation: pill-glow 1.6s ease-in-out infinite; }
+    .token-shimmer {
+      position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.16) 50%, transparent 65%);
+      animation: shimmer-sweep 2.6s linear infinite;
+    }
+    .token-watermark {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 2.4rem; letter-spacing: .15em; white-space: nowrap;
+      color: rgba(16,185,129,.07); transform: rotate(-20deg) scale(1.5);
+    }
+    /* Served state: kill the motion so the static green tick reads as "done". */
+    .token-served .token-shimmer, .token-served .token-watermark { display: none; }
+
+    /* =========================================================================
+       LIGHT THEME — the toggle adds `.light` to <html>. The UI is authored in
+       dark Tailwind classes, so here we remap just the slate palette tokens that
+       are actually used. Accent colours (emerald/amber/rose) work in both modes.
+       ========================================================================= */
+    html.light { color-scheme: light; }
+    html.light body { background-color: #eef2f6 !important; color: #0f172a !important; }
+
+    /* surfaces */
+    html.light .bg-slate-950        { background-color: #eef2f6 !important; }
+    html.light .bg-slate-950\/80    { background-color: rgba(238,242,246,.82) !important; }
+    html.light .bg-slate-950\/90    { background-color: rgba(238,242,246,.92) !important; }
+    html.light .bg-slate-950\/85    { background-color: rgba(255,255,255,.88) !important; }
+    html.light .bg-slate-900        { background-color: #ffffff !important; }
+    html.light .bg-slate-900\/95    { background-color: rgba(255,255,255,.95) !important; }
+    html.light .bg-slate-900\/40    { background-color: rgba(255,255,255,.70) !important; }
+    html.light .bg-slate-800        { background-color: #e2e8f0 !important; }
+
+    /* text */
+    html.light .text-slate-100 { color: #0f172a !important; }
+    html.light .text-slate-200 { color: #1e293b !important; }
+    html.light .text-slate-300 { color: #334155 !important; }
+    html.light .text-slate-400 { color: #475569 !important; }
+    html.light .text-slate-500 { color: #64748b !important; }
+    html.light .text-slate-600 { color: #94a3b8 !important; }
+
+    /* borders */
+    html.light .border-slate-700 { border-color: #cbd5e1 !important; }
+    html.light .border-slate-800 { border-color: #e2e8f0 !important; }
+
+    /* hover */
+    html.light .hover\:bg-slate-700:hover  { background-color: #cbd5e1 !important; }
+    html.light .hover\:bg-slate-800:hover  { background-color: #e2e8f0 !important; }
+    html.light .hover\:text-slate-300:hover { color: #334155 !important; }
+    html.light .hover\:text-slate-200:hover { color: #1e293b !important; }
+
+    /* The token "ticket" card has a fixed dark gradient + white shimmer. In light
+       mode flip it to a white card with a subtle dark shimmer so text stays legible. */
+    html.light #token-card { background: #ffffff !important; }
+    html.light .token-shimmer {
+      background: linear-gradient(110deg, transparent 35%, rgba(15,23,42,.06) 50%, transparent 65%);
+    }
+    html.light .token-watermark { color: rgba(16,185,129,.10); }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans antialiased">
+  {% block body %}{% endblock %}
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+    // Theme toggle: any element with class "theme-toggle" flips light/dark and
+    // persists the choice. Works for the buttons placed in each page's header.
+    (function () {
+      const root = document.documentElement;
+      const icon = () => (root.classList.contains('light') ? '☀️' : '🌙');
+      // Update the icon: a nested .theme-icon span if the button has a label,
+      // otherwise the button itself (icon-only buttons).
+      const sync = () =>
+        document.querySelectorAll('.theme-toggle').forEach((b) => {
+          (b.querySelector('.theme-icon') || b).textContent = icon();
+        });
+      document.querySelectorAll('.theme-toggle').forEach((b) =>
+        b.addEventListener('click', () => {
+          root.classList.toggle('light');
+          try { localStorage.setItem('theme', root.classList.contains('light') ? 'light' : 'dark'); } catch (e) {}
+          sync();
+        })
+      );
+      sync();
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

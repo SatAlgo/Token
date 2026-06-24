@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Admin · {{ shop_name }}{% endblock %}
+{% block body %}
+<div class="md:flex md:min-h-screen">
+  <!-- Sidebar (desktop) -->
+  <aside class="hidden md:flex md:flex-col md:w-60 md:fixed md:inset-y-0 border-r border-slate-800 bg-slate-900/40 p-4">
+    <div class="px-2 mb-6">
+      <h1 class="text-lg font-bold">{{ shop_name }} 🍵</h1>
+      <p class="text-xs text-slate-500">Admin dashboard</p>
+    </div>
+    <nav class="space-y-1 flex-1">
+      <button data-nav="overview" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>📊</span> Overview</button>
+      <button data-nav="orders" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>🧾</span> Orders</button>
+      <button data-nav="menu" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>🍽️</span> Menu</button>
+    </nav>
+    <div class="space-y-1 text-sm">
+      <button class="theme-toggle w-full text-left px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 flex items-center gap-2" aria-label="Toggle light/dark"><span class="theme-icon">🌙</span> Theme</button>
+      <a href="/waiter" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800">Waiter view</a>
+      <a href="/logout" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800">Logout</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="md:ml-60 flex-1 pb-24 md:pb-8">
+    <!-- Mobile top bar -->
+    <header class="md:hidden sticky top-0 z-10 bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+      <h1 class="font-bold">{{ shop_name }} Admin</h1>
+      <div class="flex items-center gap-2">
+        <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+        <a href="/logout" class="text-xs text-slate-500">Logout</a>
+      </div>
+    </header>
+
+    <div class="max-w-5xl mx-auto px-4 md:px-8 pt-5">
+      <!-- ============ OVERVIEW ============ -->
+      <section data-section="overview">
+        <h2 class="text-xl font-bold mb-4 hidden md:block">Overview</h2>
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Revenue today</p>
+            <p id="a-rev-today" class="text-2xl font-black text-emerald-400 mt-1">₹0</p>
+          </div>
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Revenue this week</p>
+            <p id="a-rev-week" class="text-2xl font-black mt-1">₹0</p>
+          </div>
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Revenue all-time</p>
+            <p id="a-rev-total" class="text-2xl font-black mt-1">₹0</p>
+          </div>
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Pending delivery</p>
+            <p id="a-pending" class="text-2xl font-black text-amber-400 mt-1">0</p>
+          </div>
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Orders served</p>
+            <p id="a-served" class="text-2xl font-black mt-1">0</p>
+          </div>
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Avg order value</p>
+            <p id="a-avg" class="text-2xl font-black mt-1">₹0</p>
+          </div>
+        </div>
+
+        <div class="mt-6 grid lg:grid-cols-2 gap-4">
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <h3 class="text-sm font-semibold text-slate-300 mb-3">Revenue — last 7 days</h3>
+            <canvas id="revChart" height="160"></canvas>
+          </div>
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+            <h3 class="text-sm font-semibold text-slate-300 mb-3">Top sellers</h3>
+            <div id="a-top" class="space-y-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ORDERS ============ -->
+      <section data-section="orders" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold hidden md:block">Orders</h2>
+          <div class="flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 ml-auto">
+            <button data-filter="all" class="filter-btn px-3 py-1.5 rounded-lg text-sm font-medium">All</button>
+            <button data-filter="pending" class="filter-btn px-3 py-1.5 rounded-lg text-sm font-medium">Pending</button>
+            <button data-filter="completed" class="filter-btn px-3 py-1.5 rounded-lg text-sm font-medium">Completed</button>
+          </div>
+        </div>
+        <div id="orders-list" class="space-y-3"></div>
+      </section>
+
+      <!-- ============ MENU ============ -->
+      <section data-section="menu" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold hidden md:block">Menu</h2>
+          <button id="add-item-btn" class="ml-auto rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 text-sm">+ Add item</button>
+        </div>
+        <div id="menu-list" class="grid sm:grid-cols-2 gap-3"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Bottom nav (mobile) -->
+<nav class="md:hidden fixed bottom-0 inset-x-0 z-20 bg-slate-900/95 backdrop-blur border-t border-slate-800 grid grid-cols-3">
+  <button data-nav="overview" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">📊</span> Overview</button>
+  <button data-nav="orders" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">🧾</span> Orders</button>
+  <button data-nav="menu" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">🍽️</span> Menu</button>
+</nav>
+
+<!-- Add/Edit item modal -->
+<div id="item-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur flex items-end md:items-center justify-center p-0 md:p-4">
+  <div class="bg-slate-900 border border-slate-700 w-full md:max-w-md md:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto">
+    <div class="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between">
+      <h3 id="modal-title" class="font-bold">Add item</h3>
+      <button id="modal-close" class="text-slate-400 text-xl">✕</button>
+    </div>
+    <form id="item-form" class="p-5 space-y-4">
+      <input type="hidden" id="f-id" />
+
+      <!-- Image upload + preview -->
+      <div>
+        <label class="text-xs text-slate-400">Photo</label>
+        <div class="mt-1 flex items-center gap-3">
+          <div id="f-preview" class="h-20 w-20 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-3xl overflow-hidden">🍵</div>
+          <label class="flex-1">
+            <span class="block text-sm rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-center cursor-pointer hover:bg-slate-700">Choose image…</span>
+            <input id="f-image" type="file" accept="image/*" class="hidden" />
+          </label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2">
+          <label class="text-xs text-slate-400">Name</label>
+          <input id="f-name" required class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Price (₹)</label>
+          <input id="f-price" type="number" step="0.01" min="0" required class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Emoji</label>
+          <input id="f-emoji" maxlength="4" value="🍵" class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-center" />
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs text-slate-400">Category</label>
+          <input id="f-category" list="cat-list" placeholder="Tea / Coffee / Snacks" class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:border-emerald-500" />
+          <datalist id="cat-list"></datalist>
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs text-slate-400">Description</label>
+          <input id="f-desc" class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:border-emerald-500" />
+        </div>
+        <label class="col-span-2 flex items-center gap-2 text-sm">
+          <input id="f-available" type="checkbox" checked class="h-4 w-4 accent-emerald-500" />
+          Available to order
+        </label>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button type="button" id="f-delete" class="hidden rounded-xl bg-rose-600/20 text-rose-400 border border-rose-600/40 px-4 py-2.5 text-sm font-semibold">Delete</button>
+        <button type="submit" class="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/static/admin.js"></script>
+{% endblock %}
