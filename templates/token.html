@@ -3,7 +3,10 @@
 {% block body %}
 <div class="mx-auto max-w-md min-h-full p-4 flex flex-col">
   <header class="flex items-center justify-between py-2">
-    <a href="/" class="text-sm text-slate-400 hover:text-slate-200">← Menu</a>
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-sm text-slate-400 hover:text-slate-200">← Menu</a>
+      <a href="/my-tokens" class="text-sm font-medium text-emerald-400 hover:text-emerald-300">My tokens</a>
+    </div>
     <div class="flex items-center gap-2">
       <span class="text-xs text-slate-500">{{ shop_name }}</span>
       <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
@@ -41,11 +44,19 @@
         </div>
       </div>
 
-      <div class="mt-5 space-y-1.5">
+      <div class="mt-5 space-y-2.5">
         {% for line in order['items'] %}
-        <div class="flex justify-between text-sm">
-          <span class="text-slate-200">{{ line.emoji }} {{ line.name }} × {{ line.qty }}</span>
-          <span class="text-slate-400">₹{{ '%.0f' % (line.price_paise * line.qty / 100) }}</span>
+        <div class="flex items-center gap-3">
+          {% if line.image_url %}
+          <img src="{{ line.image_url }}" alt="{{ line.name }}" class="h-14 w-14 rounded-xl object-cover shrink-0" />
+          {% else %}
+          <div class="h-14 w-14 rounded-xl bg-slate-800 flex items-center justify-center text-3xl shrink-0">{{ line.emoji }}</div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold leading-tight truncate">{{ line.name }}</p>
+            <p class="text-xs text-slate-400">₹{{ '%.0f' % (line.price_paise / 100) }} each</p>
+          </div>
+          <div class="text-3xl font-black text-emerald-400 leading-none">×{{ line.qty }}</div>
         </div>
         {% endfor %}
       </div>

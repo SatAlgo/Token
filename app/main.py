@@ -31,7 +31,7 @@ from sqlmodel import Session, select
 from . import images, payments, security
 from .config import settings
 from .database import get_session, init_db
-from .models import MenuItem, Order, OrderStatus
+from .models import MenuItem, Order, OrderStatus, User
 from .realtime import manager
 from .seed import seed_menu
 
@@ -86,9 +86,24 @@ def menu_item_dict(i: MenuItem) -> dict:
     }
 
 
-def require_staff(request: Request) -> None:
-    if not security.is_valid_session(request.cookies.get("staff_session")):
+def current_session(request: Request) -> dict | None:
+    return security.decode_session(request.cookies.get("staff_session"))
+
+
+def require_staff(request: Request) -> dict:
+    """Any logged-in staff member (admin or waiter)."""
+    s = current_session(request)
+    if not s or s.get("role") not in ("admin", "waiter"):
         raise HTTPException(status_code=401, detail="Not logged in")
+    return s
+
+
+def require_admin(request: Request) -> dict:
+    """Admin (owner) only — menu, analytics, orders, staff management."""
+    s = current_session(request)
+    if not s or s.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    return s
 
 
 # --------------------------------------------------------------------------- #
@@ -108,6 +123,15 @@ def page_menu(request: Request, session: Session = Depends(get_session)):
             "shop_name": settings.SHOP_NAME,
             "payment_mode": settings.PAYMENT_MODE,
         },
+    )
+
+
+@app.get("/my-tokens", response_class=HTMLResponse)
+def page_my_tokens(request: Request):
+    # The list itself lives in the browser's localStorage (customers aren't logged
+    # in); this page just renders it and refreshes each token's status.
+    return templates.TemplateResponse(
+        "my_tokens.html", {"request": request, "shop_name": settings.SHOP_NAME}
     )
 
 
@@ -140,47 +164,88 @@ def page_token(request: Request, public_id: str, session: Session = Depends(get_
 
 @app.get("/waiter", response_class=HTMLResponse)
 def page_waiter(request: Request):
-    if not security.is_valid_session(request.cookies.get("staff_session")):
-        return RedirectResponse("/login?next=/waiter")
+    s = current_session(request)
+    if not s or s.get("role") not in ("admin", "waiter"):
+        return RedirectResponse("/login")
     return templates.TemplateResponse(
-        "waiter.html", {"request": request, "shop_name": settings.SHOP_NAME}
+        "waiter.html",
+        {
+            "request": request,
+            "shop_name": settings.SHOP_NAME,
+            "is_admin": s.get("role") == "admin",
+            "username": s.get("username", ""),
+        },
     )
 
 
 @app.get("/admin", response_class=HTMLResponse)
 def page_admin(request: Request):
-    if not security.is_valid_session(request.cookies.get("staff_session")):
-        return RedirectResponse("/login?next=/admin")
+    s = current_session(request)
+    if not s or s.get("role") != "admin":
+        return RedirectResponse("/admin/login")
     return templates.TemplateResponse(
         "admin.html", {"request": request, "shop_name": settings.SHOP_NAME}
     )
 
 
-@app.get("/login", response_class=HTMLResponse)
-def page_login(request: Request, next: str = "/waiter"):
-    return templates.TemplateResponse(
-        "login.html", {"request": request, "next": next, "shop_name": settings.SHOP_NAME}
-    )
-
-
-@app.post("/login")
-def do_login(next: str = Form("/waiter"), password: str = Form(...)):
-    if password != settings.ADMIN_PASSWORD:
-        return RedirectResponse(f"/login?next={next}&error=1", status_code=303)
-    resp = RedirectResponse(next, status_code=303)
+def _set_session(resp, role: str, username: str = ""):
     resp.set_cookie(
         "staff_session",
-        security.issue_session_cookie(),
+        security.issue_session_cookie(role, username),
         httponly=True,
         samesite="lax",
         max_age=12 * 3600,
     )
+
+
+# ---- Waiter login (username + password account created by the admin) -------- #
+@app.get("/login", response_class=HTMLResponse)
+def page_login(request: Request):
+    return templates.TemplateResponse(
+        "login.html", {"request": request, "shop_name": settings.SHOP_NAME}
+    )
+
+
+@app.post("/login")
+def do_login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    user = session.exec(
+        select(User).where(User.username == username.strip())
+    ).first()
+    if not user or not user.active or not security.verify_password(password, user.password_hash):
+        return RedirectResponse("/login?error=1", status_code=303)
+    resp = RedirectResponse("/waiter", status_code=303)
+    _set_session(resp, user.role, user.username)
+    return resp
+
+
+# ---- Admin login (the owner, via ADMIN_PASSWORD) --------------------------- #
+@app.get("/admin/login", response_class=HTMLResponse)
+def page_admin_login(request: Request):
+    return templates.TemplateResponse(
+        "admin_login.html", {"request": request, "shop_name": settings.SHOP_NAME}
+    )
+
+
+@app.post("/admin/login")
+def do_admin_login(password: str = Form(...)):
+    if password != settings.ADMIN_PASSWORD:
+        return RedirectResponse("/admin/login?error=1", status_code=303)
+    resp = RedirectResponse("/admin", status_code=303)
+    _set_session(resp, "admin", "admin")
     return resp
 
 
 @app.get("/logout")
-def logout():
-    resp = RedirectResponse("/login", status_code=303)
+def logout(request: Request):
+    # Send each role back to its own login screen.
+    s = current_session(request)
+    dest = "/admin/login" if s and s.get("role") == "admin" else "/login"
+    resp = RedirectResponse(dest, status_code=303)
     resp.delete_cookie("staff_session")
     return resp
 
@@ -418,7 +483,7 @@ def api_stats(request: Request, session: Session = Depends(get_session)):
 @app.get("/api/admin/menu")
 def admin_list_menu(request: Request, session: Session = Depends(get_session)):
     """All items, including unavailable ones (unlike the public /api/menu)."""
-    require_staff(request)
+    require_admin(request)
     items = session.exec(select(MenuItem).order_by(MenuItem.category, MenuItem.id)).all()
     return [menu_item_dict(i) for i in items]
 
@@ -435,7 +500,7 @@ async def admin_create_menu(
     image: UploadFile | None = File(None),
     session: Session = Depends(get_session),
 ):
-    require_staff(request)
+    require_admin(request)
     image_url = ""
     if image is not None and image.filename:
         image_url = images.upload_image(await image.read(), image.filename) or ""
@@ -468,7 +533,7 @@ async def admin_update_menu(
     image: UploadFile | None = File(None),
     session: Session = Depends(get_session),
 ):
-    require_staff(request)
+    require_admin(request)
     item = session.get(MenuItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -492,7 +557,7 @@ async def admin_update_menu(
 def admin_toggle_availability(
     item_id: int, request: Request, session: Session = Depends(get_session)
 ):
-    require_staff(request)
+    require_admin(request)
     item = session.get(MenuItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -507,7 +572,7 @@ def admin_toggle_availability(
 def admin_delete_menu(
     item_id: int, request: Request, session: Session = Depends(get_session)
 ):
-    require_staff(request)
+    require_admin(request)
     item = session.get(MenuItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -527,7 +592,7 @@ def admin_orders(
 ):
     """Complete order view. 'pending' = paid but not yet delivered, 'completed'
     = served/delivered. Each order carries a `delivered` flag and table number."""
-    require_staff(request)
+    require_admin(request)
     query = select(Order)
     if status == "pending":
         query = query.where(Order.status == OrderStatus.PAID)
@@ -549,7 +614,7 @@ def admin_orders(
 
 @app.get("/api/admin/analytics")
 def admin_analytics(request: Request, session: Session = Depends(get_session)):
-    require_staff(request)
+    require_admin(request)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_ago = start_of_day - timedelta(days=6)  # last 7 calendar days incl. today
@@ -601,6 +666,99 @@ def admin_analytics(request: Request, session: Session = Depends(get_session)):
         "days": days,
         "top_items": top_items,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Admin API: waiter account management (admin creates waiters + sets passwords)
+# --------------------------------------------------------------------------- #
+def user_dict(u: User) -> dict:
+    return {
+        "id": u.id,
+        "username": u.username,
+        "role": u.role,
+        "active": u.active,
+        "created_at": u.created_at.isoformat(),
+    }
+
+
+@app.get("/api/admin/users")
+def admin_list_users(request: Request, session: Session = Depends(get_session)):
+    require_admin(request)
+    users = session.exec(select(User).order_by(User.username)).all()
+    return [user_dict(u) for u in users]
+
+
+@app.post("/api/admin/users")
+def admin_create_user(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    require_admin(request)
+    username = username.strip()
+    if len(username) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    if session.exec(select(User).where(User.username == username)).first():
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    user = User(
+        username=username,
+        password_hash=security.hash_password(password),
+        role="waiter",
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user_dict(user)
+
+
+@app.post("/api/admin/users/{user_id}/password")
+def admin_reset_password(
+    user_id: int,
+    request: Request,
+    password: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    require_admin(request)
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    user.password_hash = security.hash_password(password)
+    session.add(user)
+    session.commit()
+    return user_dict(user)
+
+
+@app.post("/api/admin/users/{user_id}/active")
+def admin_toggle_user(
+    user_id: int, request: Request, session: Session = Depends(get_session)
+):
+    require_admin(request)
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.active = not user.active
+    session.add(user)
+    session.commit()
+    return user_dict(user)
+
+
+@app.delete("/api/admin/users/{user_id}")
+def admin_delete_user(
+    user_id: int, request: Request, session: Session = Depends(get_session)
+):
+    require_admin(request)
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    session.delete(user)
+    session.commit()
+    return {"deleted": user_id}
 
 
 # --------------------------------------------------------------------------- #

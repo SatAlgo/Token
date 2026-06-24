@@ -1,30 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Waiter login · {{ shop_name }}{% endblock %}
+{% block title %}Admin login · {{ shop_name }}{% endblock %}
 {% block body %}
 <div class="mx-auto max-w-sm min-h-full flex flex-col justify-center p-6">
   <div class="text-center mb-6">
-    <div class="text-4xl">🧑‍🍳</div>
-    <h1 class="mt-2 text-xl font-bold">Waiter login</h1>
+    <div class="text-4xl">🔐</div>
+    <h1 class="mt-2 text-xl font-bold">Owner / Admin login</h1>
     <p class="text-sm text-slate-400">{{ shop_name }}</p>
   </div>
-  <form method="post" action="/login" class="space-y-3">
-    <input type="text" name="username" placeholder="Username" autofocus autocapitalize="none"
-      class="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 focus:outline-none focus:border-emerald-500" />
-    <input type="password" name="password" placeholder="Password"
+  <form method="post" action="/admin/login" class="space-y-3">
+    <input type="password" name="password" placeholder="Admin password" autofocus
       class="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 focus:outline-none focus:border-emerald-500" />
     {% if request.query_params.get('error') %}
-    <p class="text-sm text-rose-400">Wrong username or password.</p>
+    <p class="text-sm text-rose-400">Wrong password, try again.</p>
     {% endif %}
     <button class="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3">
       Log in
     </button>
   </form>
-  <p class="mt-4 text-center text-xs text-slate-500">
-    Don't have an account? Ask the owner to create one.
-  </p>
   <div class="mt-6 flex items-center justify-center gap-4 text-xs">
     <a href="/" class="text-slate-500 hover:text-slate-300">← Menu</a>
-    <a href="/admin/login" class="text-slate-500 hover:text-slate-300">Owner / Admin login</a>
+    <a href="/login" class="text-slate-500 hover:text-slate-300">Waiter login</a>
     <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
   </div>
 </div>

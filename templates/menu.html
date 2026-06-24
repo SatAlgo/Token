@@ -8,7 +8,10 @@
       <h1 class="text-lg font-bold">{{ shop_name }} 🍵</h1>
       <p class="text-xs text-slate-400">Self-service · pay online · skip the queue</p>
     </div>
-    <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+    <div class="flex items-center gap-2">
+      <a href="/my-tokens" class="text-xs font-medium text-emerald-400 hover:text-emerald-300 px-2 py-1.5 rounded-lg bg-emerald-500/10">🎟️ My tokens</a>
+      <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+    </div>
   </header>
 
   {% if payment_mode == "demo" %}

@@ -28,6 +28,24 @@
     localStorage.setItem("lastToken:" + order.public_id, JSON.stringify({ order, jwt }));
   } catch (e) {}
 
+  // --- Remember this token in the customer's "My tokens" list (this device) so
+  // they can return to it after going back to the menu and order again. ---
+  try {
+    const KEY = "myTokens";
+    const list = JSON.parse(localStorage.getItem(KEY) || "[]");
+    const entry = {
+      public_id: order.public_id,
+      total_paise: order.total_paise,
+      table_number: order.table_number,
+      created_at: order.created_at,
+      items: order.items,
+    };
+    const idx = list.findIndex((o) => o.public_id === order.public_id);
+    if (idx >= 0) list[idx] = entry;
+    else list.unshift(entry);
+    localStorage.setItem(KEY, JSON.stringify(list.slice(0, 30))); // keep last 30
+  } catch (e) {}
+
   function showServed() {
     document.getElementById("served-overlay").classList.remove("hidden");
     // Stop the glow/shimmer so a static green tick clearly reads as "done".

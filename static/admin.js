@@ -19,13 +19,15 @@
     if (section === "overview") loadOverview();
     if (section === "orders") loadOrders();
     if (section === "menu") loadMenu();
+    if (section === "staff") loadStaff();
     location.hash = section;
   }
   $$(".nav-btn").forEach((b) => b.addEventListener("click", () => show(b.dataset.nav)));
 
   async function getJSON(url) {
     const res = await fetch(url);
-    if (res.status === 401) return (window.location.href = "/login?next=/admin"), null;
+    if (res.status === 401 || res.status === 403)
+      return (window.location.href = "/admin/login"), null;
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
     return res.json();
   }
@@ -276,6 +278,99 @@
     loadMenu();
   });
 
+  // ---------------------------------------------------------------- staff (waiters)
+  async function loadStaff() {
+    const users = await getJSON("/api/admin/users");
+    if (!users) return;
+    $("#staff-list").innerHTML = users.length
+      ? users
+          .map(
+            (u) => `
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-3 flex items-center gap-3 ${u.active ? "" : "opacity-60"}">
+          <div class="h-11 w-11 rounded-full bg-slate-800 flex items-center justify-center text-lg">🧑‍🍳</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold truncate">${u.username}</p>
+            <p class="text-xs ${u.active ? "text-emerald-400" : "text-rose-400"}">${u.active ? "Active" : "Disabled"} · waiter</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <button data-pass="${u.id}" data-name="${u.username}" class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700">Password</button>
+            <button data-active="${u.id}" class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700">${u.active ? "Disable" : "Enable"}</button>
+            <button data-del="${u.id}" data-name="${u.username}" class="text-xs px-2 py-1 rounded-lg bg-rose-600/20 text-rose-400">Delete</button>
+          </div>
+        </div>`
+          )
+          .join("")
+      : '<p class="text-sm text-slate-500">No waiter accounts yet. Add one so a waiter can log in.</p>';
+
+    $$("[data-active]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        await fetch(`/api/admin/users/${b.dataset.active}/active`, { method: "POST" });
+        loadStaff();
+      })
+    );
+    $$("[data-del]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        if (!confirm(`Delete waiter "${b.dataset.name}"?`)) return;
+        await fetch(`/api/admin/users/${b.dataset.del}`, { method: "DELETE" });
+        loadStaff();
+      })
+    );
+    $$("[data-pass]").forEach((b) =>
+      b.addEventListener("click", () => openWaiterModal({ id: b.dataset.pass, username: b.dataset.name }))
+    );
+  }
+
+  const waiterModal = $("#waiter-modal");
+  function openWaiterModal(reset) {
+    $("#waiter-form").reset();
+    if (reset) {
+      // Reset-password mode: lock the username, just take a new password.
+      $("#waiter-modal-title").textContent = "Reset password";
+      $("#w-id").value = reset.id;
+      $("#w-username").value = reset.username;
+      $("#w-username").disabled = true;
+      $("#w-pass-label").textContent = "New password";
+      $("#w-delete").classList.add("hidden");
+    } else {
+      $("#waiter-modal-title").textContent = "Add waiter";
+      $("#w-id").value = "";
+      $("#w-username").disabled = false;
+      $("#w-pass-label").textContent = "Password";
+      $("#w-delete").classList.add("hidden");
+    }
+    waiterModal.classList.remove("hidden");
+  }
+  function closeWaiterModal() {
+    waiterModal.classList.add("hidden");
+  }
+  $("#add-waiter-btn").addEventListener("click", () => openWaiterModal(null));
+  $("#waiter-modal-close").addEventListener("click", closeWaiterModal);
+  waiterModal.addEventListener("click", (e) => {
+    if (e.target === waiterModal) closeWaiterModal();
+  });
+
+  $("#waiter-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = $("#w-id").value;
+    const fd = new FormData();
+    fd.append("password", $("#w-password").value);
+    let url, method = "POST";
+    if (id) {
+      url = `/api/admin/users/${id}/password`; // reset password
+    } else {
+      fd.append("username", $("#w-username").value);
+      url = "/api/admin/users";
+    }
+    try {
+      const res = await fetch(url, { method, body: fd });
+      if (!res.ok) throw new Error((await res.json()).detail || "Failed");
+      closeWaiterModal();
+      loadStaff();
+    } catch (err) {
+      alert("Could not save: " + err.message);
+    }
+  });
+
   // ---------------------------------------------------------------- realtime
   // New paid orders / deliveries refresh the open section live.
   function connectWS() {
@@ -291,7 +386,7 @@
   }
 
   // ---------------------------------------------------------------- boot
-  const start = ["overview", "orders", "menu"].includes(location.hash.slice(1))
+  const start = ["overview", "orders", "menu", "staff"].includes(location.hash.slice(1))
     ? location.hash.slice(1)
     : "overview";
   // default the order filter highlight

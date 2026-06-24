@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}My tokens · {{ shop_name }}{% endblock %}
+{% block body %}
+<div class="mx-auto max-w-md min-h-full p-4">
+  <header class="flex items-center justify-between py-2">
+    <a href="/" class="text-sm text-slate-400 hover:text-slate-200">← Menu</a>
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-slate-500">{{ shop_name }}</span>
+      <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <h1 class="mt-3 text-2xl font-black">My tokens 🎟️</h1>
+  <p class="text-sm text-slate-400">Every order you placed on this device.</p>
+
+  <div id="tokens-list" class="mt-5 space-y-3"></div>
+
+  <div id="empty" class="hidden text-center mt-16">
+    <div class="text-5xl">🍵</div>
+    <p class="mt-3 text-sm text-slate-400">You haven't ordered yet.</p>
+    <a href="/" class="inline-block mt-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5">Browse the menu</a>
+  </div>
+</div>
+
+<template id="token-row">
+  <a class="row block rounded-2xl bg-slate-900 border border-slate-800 p-4 hover:border-emerald-500/50 transition-colors">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="pid font-bold"></span>
+        <span class="table hidden text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300"></span>
+      </div>
+      <span class="status text-xs px-2 py-0.5 rounded-full"></span>
+    </div>
+    <p class="time text-xs text-slate-500 mt-0.5"></p>
+    <div class="items mt-2 flex items-center gap-2 overflow-hidden"></div>
+    <div class="mt-2 flex items-center justify-between">
+      <span class="total text-emerald-400 font-bold"></span>
+      <span class="text-xs text-slate-500">View token →</span>
+    </div>
+  </a>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/my_tokens.js"></script>
+{% endblock %}

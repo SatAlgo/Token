@@ -6,6 +6,9 @@ was never paid for — any tampering breaks the signature.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -45,23 +48,50 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
 
 
-# --- Admin / waiter login (signed cookie, no DB session table needed) ---
+# --- Password hashing (PBKDF2-HMAC-SHA256, standard library) ---------------- #
+# Stored format: "pbkdf2$<iterations>$<salt_b64>$<hash_b64>". We never store the
+# raw password, and compare with a constant-time check to avoid timing attacks.
+_PBKDF2_ITERATIONS = 200_000
 
-def issue_session_cookie() -> str:
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ITERATIONS)
+    return f"pbkdf2${_PBKDF2_ITERATIONS}${base64.b64encode(salt).decode()}${base64.b64encode(dk).decode()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        algo, iters, salt_b64, hash_b64 = stored.split("$")
+        if algo != "pbkdf2":
+            return False
+        salt = base64.b64decode(salt_b64)
+        expected = base64.b64decode(hash_b64)
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, int(iters))
+        return hmac.compare_digest(dk, expected)
+    except (ValueError, TypeError):
+        return False
+
+
+# --- Staff login sessions (signed cookie, carries the role) ----------------- #
+# role is "admin" (the owner, via ADMIN_PASSWORD) or "waiter" (a DB account the
+# admin created). The cookie is a short-lived signed JWT — no DB session table.
+
+def issue_session_cookie(role: str, username: str = "") -> str:
     now = datetime.now(timezone.utc)
     payload = {
-        "role": "staff",
+        "role": role,
+        "username": username,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=12)).timestamp()),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-def is_valid_session(cookie: str | None) -> bool:
+def decode_session(cookie: str | None) -> dict | None:
     if not cookie:
-        return False
+        return None
     try:
-        data = jwt.decode(cookie, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        return data.get("role") == "staff"
+        return jwt.decode(cookie, settings.SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.PyJWTError:
-        return False
+        return None

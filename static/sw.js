@@ -4,8 +4,15 @@
 //   - App shell + visited token pages are cached so they load with no network.
 //   - For /t/<id> token pages we use "network-first, fall back to cache" so a
 //     customer who paid online still sees their token if wifi/power dies after.
-const CACHE = "tea-token-v1";
-const SHELL = ["/", "/static/menu.js", "/static/token.js", "/manifest.webmanifest"];
+const CACHE = "tea-token-v2";
+const SHELL = [
+  "/",
+  "/my-tokens",
+  "/static/menu.js",
+  "/static/token.js",
+  "/static/my_tokens.js",
+  "/manifest.webmanifest",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));

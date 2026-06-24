@@ -69,7 +69,7 @@
 
   async function loadInitial() {
     const res = await fetch("/api/staff/active");
-    if (res.status === 401) return (window.location.href = "/login?next=/waiter");
+    if (res.status === 401) return (window.location.href = "/login");
     const list = await res.json();
     list.forEach(addOrUpdate);
   }

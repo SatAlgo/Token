@@ -12,6 +12,7 @@
       <button data-nav="overview" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>📊</span> Overview</button>
       <button data-nav="orders" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>🧾</span> Orders</button>
       <button data-nav="menu" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>🍽️</span> Menu</button>
+      <button data-nav="staff" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><span>🧑‍🍳</span> Staff</button>
     </nav>
     <div class="space-y-1 text-sm">
       <button class="theme-toggle w-full text-left px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 flex items-center gap-2" aria-label="Toggle light/dark"><span class="theme-icon">🌙</span> Theme</button>
@@ -95,15 +96,26 @@
         </div>
         <div id="menu-list" class="grid sm:grid-cols-2 gap-3"></div>
       </section>
+
+      <!-- ============ STAFF (waiter accounts) ============ -->
+      <section data-section="staff" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold hidden md:block">Staff</h2>
+          <button id="add-waiter-btn" class="ml-auto rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 text-sm">+ Add waiter</button>
+        </div>
+        <p class="text-xs text-slate-500 mb-3">Waiters log in at <span class="font-mono">/login</span> with the username &amp; password you set here.</p>
+        <div id="staff-list" class="grid sm:grid-cols-2 gap-3"></div>
+      </section>
     </div>
   </main>
 </div>
 
 <!-- Bottom nav (mobile) -->
-<nav class="md:hidden fixed bottom-0 inset-x-0 z-20 bg-slate-900/95 backdrop-blur border-t border-slate-800 grid grid-cols-3">
+<nav class="md:hidden fixed bottom-0 inset-x-0 z-20 bg-slate-900/95 backdrop-blur border-t border-slate-800 grid grid-cols-4">
   <button data-nav="overview" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">📊</span> Overview</button>
   <button data-nav="orders" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">🧾</span> Orders</button>
   <button data-nav="menu" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">🍽️</span> Menu</button>
+  <button data-nav="staff" class="nav-btn py-3 text-xs flex flex-col items-center gap-0.5"><span class="text-lg">🧑‍🍳</span> Staff</button>
 </nav>
 
 <!-- Add/Edit item modal -->
@@ -158,6 +170,31 @@
 
       <div class="flex gap-2 pt-1">
         <button type="button" id="f-delete" class="hidden rounded-xl bg-rose-600/20 text-rose-400 border border-rose-600/40 px-4 py-2.5 text-sm font-semibold">Delete</button>
+        <button type="submit" class="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Add / edit waiter modal -->
+<div id="waiter-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur flex items-end md:items-center justify-center p-0 md:p-4">
+  <div class="bg-slate-900 border border-slate-700 w-full md:max-w-sm md:rounded-2xl rounded-t-2xl">
+    <div class="border-b border-slate-800 px-5 py-3 flex items-center justify-between">
+      <h3 id="waiter-modal-title" class="font-bold">Add waiter</h3>
+      <button id="waiter-modal-close" class="text-slate-400 text-xl">✕</button>
+    </div>
+    <form id="waiter-form" class="p-5 space-y-4">
+      <input type="hidden" id="w-id" />
+      <div>
+        <label class="text-xs text-slate-400">Username</label>
+        <input id="w-username" autocapitalize="none" required class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:border-emerald-500" />
+      </div>
+      <div>
+        <label class="text-xs text-slate-400" id="w-pass-label">Password</label>
+        <input id="w-password" type="text" required placeholder="set a password" class="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:border-emerald-500" />
+        <p class="text-[11px] text-slate-500 mt-1">Shown as plain text so you can share it with the waiter.</p>
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button type="button" id="w-delete" class="hidden rounded-xl bg-rose-600/20 text-rose-400 border border-rose-600/40 px-4 py-2.5 text-sm font-semibold">Delete</button>
         <button type="submit" class="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5">Save</button>
       </div>
     </form>

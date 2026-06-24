@@ -12,7 +12,7 @@
     </div>
     <div class="flex items-center gap-3 text-xs">
       <button id="scan-btn" class="text-emerald-400">Verify token</button>
-      <a href="/admin" class="text-slate-500 hover:text-slate-300">Admin</a>
+      {% if is_admin %}<a href="/admin" class="text-slate-500 hover:text-slate-300">Admin</a>{% endif %}
       <a href="/logout" class="text-slate-500 hover:text-slate-300">Logout</a>
       <button class="theme-toggle h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center" aria-label="Toggle light/dark" title="Toggle theme">🌙</button>
     </div>

@@ -23,6 +23,17 @@ class OrderStatus(str, enum.Enum):
     REFUNDED = "refunded"                # money returned
 
 
+class User(SQLModel, table=True):
+    """A staff login. The admin (owner) logs in with ADMIN_PASSWORD and is not in
+    this table; waiter accounts live here and are created by the admin."""
+    id: int | None = Field(default=None, primary_key=True)
+    username: str = Field(index=True, unique=True)
+    password_hash: str
+    role: str = "waiter"                 # only "waiter" today; room to grow
+    active: bool = True
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class MenuItem(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
